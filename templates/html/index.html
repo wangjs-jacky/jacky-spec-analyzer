@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{projectName} - 分析报告</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>{projectName}</h2>
+        <ul>
+            <li><a href="#overview">概览</a></li>
+            <li><a href="#problems">问题分析</a></li>
+            <li><a href="#solutions">解决方案</a></li>
+            <li><a href="#technical">技术要点</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <section id="overview">
+            {overviewContent}
+        </section>
+        <section id="problems">
+            {problemsContent}
+        </section>
+        <section id="solutions">
+            {solutionsContent}
+        </section>
+        <section id="technical">
+            {technicalContent}
+        </section>
+    </main>
+    <script>
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // 高亮当前章节
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.sidebar a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
