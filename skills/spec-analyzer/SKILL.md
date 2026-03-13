@@ -1,6 +1,6 @@
 ---
 name: spec-analyzer
-description: 分析 spec-driven 仓库，提取核心知识。当用户想要分析 GitHub 仓库、提取项目文档、了解项目架构时触发。
+description: 分析 spec-driven 仓库，提取核心知识。当用户想要分析 GitHub 仓库、提取项目文档、了解项目架构、翻译项目文档时触发。
 ---
 
 # spec-analyzer
@@ -14,7 +14,7 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 ## 使用方式
 
 ```bash
-# 分析远程仓库
+# 分析远程仓库（自动 clone 并翻译为中文）
 /spec-analyzer https://github.com/gsd-build/get-shit-done
 
 # 分析本地仓库
@@ -22,6 +22,9 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 
 # 指定输出目录和分析深度
 /spec-analyzer https://github.com/xxx/yyy --output ./docs --depth deep
+
+# 保留英文原文，不翻译
+/spec-analyzer https://github.com/xxx/yyy --lang en
 ```
 
 ## 参数
@@ -31,13 +34,45 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 | `--output, -o` | 输出目录 | `./analyzed/` |
 | `--depth, -d` | 分析深度 (quick/deep) | `quick` |
 | `--lang, -l` | 输出语言 (zh-CN/en) | `zh-CN` |
+| `--keep-repo, -k` | Clone 后保留仓库（不删除） | `false` |
 
 ## 工作流程
 
-### 1. 确定输入源
+### 1. 确定输入源并 Clone 仓库
 
-- 如果是 GitHub URL，使用 Agent 工具克隆到临时目录进行分析
-- 如果是本地路径，直接读取分析
+#### 如果是 GitHub URL
+
+**必须先 Clone 仓库到本地临时目录**：
+
+1. 解析 GitHub URL，提取 `owner/repo` 信息
+2. 检查是否已配置 Git 代理（如需要）
+3. Clone 仓库到临时目录：
+   ```bash
+   # macOS/Linux 临时目录
+   cd /tmp && git clone https://github.com/owner/repo.git
+   ```
+4. 记录 clone 路径，后续分析使用此路径
+5. 分析完成后，根据 `--keep-repo` 参数决定是否删除临时仓库
+
+**Clone 命令示例**：
+```bash
+# 设置代理（如需要）
+git config --global http.proxy http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+
+# Clone 仓库
+cd /tmp
+git clone https://github.com/gsd-build/get-shit-done.git
+
+# 完成后取消代理
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
+#### 如果是本地路径
+
+- 直接使用提供的路径进行分析
+- 跳过 clone 步骤
 
 ### 2. 扫描文档
 
@@ -85,17 +120,68 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 3. 代码示例和用法
 4. 数据流和架构
 
-### 5. 生成输出
+### 5. 文档翻译
+
+**当 `--lang zh-CN` 时（默认），需要将英文文档翻译为中文**：
+
+#### 翻译原则
+
+1. **保持格式不变**：Markdown 结构、代码块、链接、表格等格式保持原样
+2. **专业术语保留**：技术术语保留英文或使用中英对照，如：
+   - Context Rot → Context Rot（上下文腐化）
+   - Wave → Wave（波次）
+   - Agent → Agent（代理）
+   - PR → PR（Pull Request）
+3. **代码不翻译**：代码块、命令、文件名、路径不翻译
+4. **链接不修改**：URL 链接保持原样
+5. **符合中文习惯**：使用流畅的中文表达，避免机翻感
+
+#### 翻译范围
+
+- README.md
+- docs/ 目录下所有 .md 文件
+- PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md 等规范文件
+- 代码注释（可选，根据深度决定）
+
+#### 翻译示例
+
+**原文**：
+```markdown
+## Getting Started
+
+First, install the dependencies:
+
+\`\`\`bash
+npm install
+\`\`\`
+```
+
+**翻译后**：
+```markdown
+## 快速开始
+
+首先，安装依赖：
+
+\`\`\`bash
+npm install
+\`\`\`
+```
+
+### 6. 生成输出
 
 输出到指定目录：
 
 ```
 ./analyzed/<repo-name>/
-├── overview.md           # 项目概览
-├── problems.md           # 问题分析
-├── solutions.md          # 解决方案
-├── technical-points.md   # 技术要点
+├── overview.md           # 项目概览（中文）
+├── problems.md           # 问题分析（中文）
+├── solutions.md          # 解决方案（中文）
+├── technical-points.md   # 技术要点（中文）
 ├── structure.json        # 结构化数据
+├── translated/           # 翻译后的原文档（可选）
+│   ├── README.md
+│   └── docs/
+│       └── *.md
 └── html/                 # 可交互 HTML
     ├── index.html
     └── assets/
@@ -233,11 +319,18 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 
 ## 示例
 
-分析 GSD 仓库：
+### 示例 1: 分析并翻译 GitHub 仓库
 
 ```bash
 /spec-analyzer https://github.com/gsd-build/get-shit-done --depth deep
 ```
+
+**执行步骤**：
+1. Clone 仓库到 `/tmp/get-shit-done/`
+2. 扫描所有 `.md` 文档
+3. 分析文档内容
+4. **翻译英文文档为中文**
+5. 生成中文分析报告
 
 预期输出：
 
@@ -245,6 +338,30 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 - `problems.md`: Context Rot 问题、Vibecoding 的不可靠性
 - `solutions.md`: Wave 执行、200K 新鲜上下文、需求追踪
 - `technical-points.md`: XML Prompt 格式、多 Agent 编排、原子提交
+- `translated/`: 翻译后的原始文档
+
+### 示例 2: 保留英文输出
+
+```bash
+/spec-analyzer https://github.com/xxx/yyy --lang en
+```
+
+**执行步骤**：
+1. Clone 仓库
+2. 分析文档（不翻译）
+3. 生成英文分析报告
+
+### 示例 3: Clone 并保留仓库
+
+```bash
+/spec-analyzer https://github.com/xxx/yyy --keep-repo
+```
+
+**执行步骤**：
+1. Clone 仓库到 `/tmp/xxx/`
+2. 分析文档
+3. 生成报告
+4. **保留临时仓库**（不删除，方便后续查看代码）
 
 ## 分析重点
 
@@ -269,3 +386,68 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 - **XML Prompt**: 结构化的任务描述格式
 - **多 Agent 编排**: Orchestrator + 专门 Agent 的模式
 - **原子提交**: 每个任务完成后立即提交
+
+## 临时文件清理
+
+### Clone 的仓库
+
+- 默认位置：`/tmp/<repo-name>/`
+- 清理策略：
+  - **默认**：分析完成后自动删除
+  - **`--keep-repo`**：保留仓库，用户手动清理
+
+### 清理命令
+
+```bash
+# 手动清理所有临时分析的仓库
+rm -rf /tmp/<repo-name>/
+
+# 或者使用通配符清理（谨慎使用）
+rm -rf /tmp/analyzed-*
+```
+
+## 常见问题
+
+### Q1: Clone 失败怎么办？
+
+**可能原因**：
+- 网络问题（需要代理）
+- 仓库不存在或私有
+- Git 未安装
+
+**解决方案**：
+```bash
+# 1. 设置代理
+git config --global http.proxy http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+
+# 2. 如果是私有仓库，先手动 clone，然后使用本地路径
+/spec-analyzer /path/to/local/repo
+
+# 3. 完成后取消代理
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
+### Q2: 翻译质量不好怎么办？
+
+**优化建议**：
+- 使用 `--depth deep` 获取更多上下文
+- 手动调整专业术语的翻译
+- 参考 `translated/` 目录下的原文进行校对
+
+### Q3: 如何只翻译不分析？
+
+当前 skill 不支持仅翻译模式。如果只需要翻译：
+```bash
+# 手动 clone 并使用其他翻译工具
+git clone https://github.com/xxx/yyy.git
+# 然后使用专门的翻译工具
+```
+
+## 注意事项
+
+1. **网络环境**：Clone GitHub 仓库可能需要代理
+2. **磁盘空间**：大型仓库可能占用较多临时空间
+3. **翻译准确性**：专业术语可能需要人工校对
+4. **隐私仓库**：私有仓库需要先手动 clone，再使用本地路径分析

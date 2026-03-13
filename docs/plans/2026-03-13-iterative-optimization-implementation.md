@@ -1,3 +1,46 @@
+# optimize-skill 迭代优化系统实现计划
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** 重写 optimize-skill SKILL.md，实现迭代优化系统，支持通过 Agent 调用 spec-analyzer 并自动评估和优化
+
+**Architecture:** 采用单 Skill 内置循环 + 文件记录的混合方案。optimize-skill 作为主控制器，使用 Agent 工具启动子代理执行 spec-analyzer，通过 LLM 评估覆盖度和深度，自动迭代优化 SKILL.md
+
+**Tech Stack:** Claude Code Skill (Markdown), Agent 工具, 文件系统
+
+---
+
+## Task 1: 备份现有 SKILL.md
+
+**Files:**
+- Create: `skills/optimize-skill/SKILL.md.backup`
+
+**Step 1: 备份当前文件**
+
+```bash
+cp /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md.backup
+```
+
+**Step 2: 验证备份**
+
+```bash
+ls -la /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/
+```
+
+Expected: 看到 SKILL.md 和 SKILL.md.backup 两个文件
+
+---
+
+## Task 2: 重写 SKILL.md 元数据和概述
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md:1-30`
+
+**Step 1: 更新元数据和概述**
+
+替换文件开头部分为：
+
+```markdown
 ---
 name: optimize-skill
 description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 skill 的提示词、通过目标内容迭代优化 skill、自动评估和优化时触发。
@@ -20,7 +63,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 - **子代理执行**: 使用 Agent 工具隔离执行目标 skill
 - **LLM 评估**: 自动评估知识点覆盖度和内容深度
 - **完整记录**: 保留每轮迭代的详细历史
+```
 
+**Step 2: 验证修改**
+
+```bash
+head -30 /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到新的元数据和概述
+
+---
+
+## Task 3: 添加使用方式和参数说明
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加到概述后)
+
+**Step 1: 添加使用方式章节**
+
+```markdown
 ## 使用方式
 
 ### 基础用法
@@ -46,7 +108,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 | `--threshold-depth` | 深度阈值 (1-5) | 3.5 |
 | `--max-iterations` | 最大迭代次数 | 5 |
 | `--output, -o` | 优化记录输出目录 | `./optimization-records/` |
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 20 "## 使用方式" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到完整的使用方式章节
+
+---
+
+## Task 4: 添加工作流程说明
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加工作流程章节**
+
+```markdown
 ## 工作流程
 
 ### 流程图
@@ -150,7 +231,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 - 迭代历史
 - 主要优化点
 - 未解决问题
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 工作流程" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到工作流程章节
+
+---
+
+## Task 5: 添加评估提示词模板
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加评估模板章节**
+
+```markdown
 ## 评估提示词模板
 
 在每轮迭代中，使用以下提示词进行评估：
@@ -214,7 +314,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 | >= 90% | >= 3.5 | ✅ 达标 |
 | 70-89% | 2.5-3.4 | ⚠️ 需要优化 |
 | < 70% | < 2.5 | ❌ 需要大幅改进 |
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 评估提示词模板" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到评估模板章节
+
+---
+
+## Task 6: 添加优化建议生成模板
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加优化模板章节**
+
+```markdown
 ## 优化建议生成模板
 
 当评估未达标时，使用以下模板生成优化建议：
@@ -272,7 +391,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 > - 模板目录（如 `get-shit-done/templates/`）
 
 **原因**: 原描述太笼统，没有指定 spec-driven 仓库特有的文件类型
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 优化建议生成模板" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到优化模板章节
+
+---
+
+## Task 7: 添加输出目录结构说明
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加输出结构章节**
+
+```markdown
 ## 输出目录结构
 
 优化完成后，生成以下文件结构：
@@ -305,7 +443,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 | `iterations/N/changes.md` | 第 N 轮对 SKILL.md 的修改 |
 | `final-report.md` | 完整的优化报告 |
 | `SKILL.md.final` | 最终优化后的 skill 文件 |
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 输出目录结构" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到输出结构章节
+
+---
+
+## Task 8: 添加最终报告模板
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加报告模板章节**
+
+```markdown
 ## 最终报告模板
 
 优化完成后，生成 `final-report.md`：
@@ -356,7 +513,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 
 - {后续改进建议}
 ```
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 最终报告模板" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到报告模板章节
+
+---
+
+## Task 9: 添加完整示例
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加)
+
+**Step 1: 添加示例章节**
+
+```markdown
 ## 完整示例
 
 ### 示例 1: 优化 spec-analyzer
@@ -431,7 +607,26 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 最终报告: ./optimization-records/20260313-143022/final-report.md
 优化后 Skill: ./optimization-records/20260313-143022/SKILL.md.final
 ```
+```
 
+**Step 2: 验证修改**
+
+```bash
+grep -A 5 "## 完整示例" /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 看到示例章节
+
+---
+
+## Task 10: 添加注意事项和清理旧内容
+
+**Files:**
+- Modify: `skills/optimize-skill/SKILL.md` (追加 + 清理)
+
+**Step 1: 添加注意事项章节**
+
+```markdown
 ## 注意事项
 
 ### 1. 迭代控制
@@ -482,7 +677,7 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 **解决方案**：
 - 检查网络和代理配置
 - 确认仓库是公开的
-- 尝试更小的测试仓库
+- 尝试 smaller 测试仓库
 
 ### Q3: 如何只做单次评估不做迭代？
 
@@ -490,3 +685,79 @@ description: 迭代优化 Claude Code Skill 的质量。当用户想要改进 sk
 # 设置 max-iterations 为 1
 /optimize-skill spec-analyzer --target ./target.md --repo https://github.com/xxx/yyy --max-iterations 1
 ```
+```
+
+**Step 2: 删除旧的重复内容**
+
+删除文件中原有的旧内容（使用方式、工作流程、优化模式等章节），保留新的结构化内容。
+
+**Step 3: 验证最终文件**
+
+```bash
+wc -l /Users/jacky/jacky-github/jacky-spec-analyzer/skills/optimize-skill/SKILL.md
+```
+
+Expected: 文件行数合理（约 300-400 行）
+
+---
+
+## Task 11: 提交更改
+
+**Files:**
+- All modified files
+
+**Step 1: 查看更改**
+
+```bash
+cd /Users/jacky/jacky-github/jacky-spec-analyzer && git status
+```
+
+**Step 2: 添加文件**
+
+```bash
+git add skills/optimize-skill/SKILL.md skills/optimize-skill/SKILL.md.backup docs/plans/
+```
+
+**Step 3: 提交**
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat: 重构 optimize-skill 为迭代优化系统
+
+- 添加迭代优化循环（类似机器学习训练）
+- 使用 Agent 工具调用子代理执行目标 skill
+- 添加 LLM 评估模块（覆盖度 + 深度）
+- 添加优化建议生成模板
+- 添加完整输出记录和最终报告
+- 保留原始 SKILL.md 备份
+
+设计文档: docs/plans/2026-03-13-iterative-optimization-design.md
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+EOF
+)"
+```
+
+**Step 4: 验证提交**
+
+```bash
+git log -1 --stat
+```
+
+Expected: 看到提交记录
+
+---
+
+## 验证清单
+
+- [ ] SKILL.md 包含新的元数据（name, description）
+- [ ] SKILL.md 包含使用方式和参数说明
+- [ ] SKILL.md 包含完整工作流程图
+- [ ] SKILL.md 包含评估提示词模板
+- [ ] SKILL.md 包含优化建议生成模板
+- [ ] SKILL.md 包含输出目录结构说明
+- [ ] SKILL.md 包含最终报告模板
+- [ ] SKILL.md 包含完整示例
+- [ ] SKILL.md 包含注意事项和常见问题
+- [ ] 原始文件已备份
+- [ ] 提交记录完整
