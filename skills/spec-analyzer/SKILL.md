@@ -34,157 +34,97 @@ description: 分析 spec-driven 仓库，提取核心知识。当用户想要分
 | `--output, -o` | 输出目录 | `./analyzed/` |
 | `--depth, -d` | 分析深度 (quick/deep) | `quick` |
 | `--lang, -l` | 输出语言 (zh-CN/en) | `zh-CN` |
-| `--keep-repo, -k` | Clone 后保留仓库（不删除） | `false` |
+| `--translate-only` | 只翻译不分析 | `false` |
+| `--keep-repo, -k` | 保留 clone 的仓库 | `false` |
 
 ## 工作流程
 
-### 1. 确定输入源并 Clone 仓库
+### 1. Clone 仓库
 
 #### 如果是 GitHub URL
 
-**必须先 Clone 仓库到本地临时目录**：
-
-1. 解析 GitHub URL，提取 `owner/repo` 信息
-2. 检查是否已配置 Git 代理（如需要）
-3. Clone 仓库到临时目录：
+1. 解析 URL，提取 `owner/repo`
+2. Clone 到临时目录：
    ```bash
-   # macOS/Linux 临时目录
    cd /tmp && git clone https://github.com/owner/repo.git
    ```
-4. 记录 clone 路径，后续分析使用此路径
-5. 分析完成后，根据 `--keep-repo` 参数决定是否删除临时仓库
-
-**Clone 命令示例**：
-```bash
-# 设置代理（如需要）
-git config --global http.proxy http://127.0.0.1:7890
-git config --global https.proxy http://127.0.0.1:7890
-
-# Clone 仓库
-cd /tmp
-git clone https://github.com/gsd-build/get-shit-done.git
-
-# 完成后取消代理
-git config --global --unset http.proxy
-git config --global --unset https.proxy
-```
+3. 根据网络情况配置代理（失败时跳过）
 
 #### 如果是本地路径
 
-- 直接使用提供的路径进行分析
-- 跳过 clone 步骤
+直接使用，跳过 clone。
 
-### 2. 扫描文档
+### 2. 翻译核心文件（Clone 后立即执行）
 
-递归查找所有 `.md` 文件，重点关注：
+**默认翻译为中文（`--lang zh-CN`），在 clone 后立即执行。**
 
-- `README.md`
-- `docs/` 目录
-- `*.md` 规范文件（如 `PROJECT.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `STATE.md`）
+#### 核心文件定义（按优先级）
 
-### 3. 分析文档
+| 优先级 | 文件 | 说明 |
+|--------|------|------|
+| 必须 | `README.md` | 项目入口文档 |
+| 必须 | `docs/**/*.md` | 所有文档 |
+| 高 | `CLAUDE.md` | Claude Code 配置（如有） |
+| 高 | `*.md` spec 文件 | `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `PLAN.md` |
+| 中 | `agents/**/*.md` | Agent 定义文件（如有） |
+| 中 | `commands/**/*.md` | 命令文档（如有） |
 
-根据分析深度执行不同的分析策略：
+#### 翻译规则
 
-**快速模式 (quick)**:
-- 读取 README 和主要文档
-- 提取核心信息
-
-**深度模式 (deep)**:
-- 读取所有 markdown 文件
-- 详细分析每个章节
-- 提取代码示例和技术细节
-
-### 4. 提取核心信息
-
-按照以下框架提取信息：
-
-#### 问题域
-
-1. 这个项目要解决什么问题？
-2. 没有这套系统之前，用户是怎么做的？
-3. 之前的做法存在什么痛点？
-4. 问题的根本原因是什么？
-
-#### 解决方案
-
-1. 这套系统如何解决这些问题？
-2. 核心工作流程是什么？
-3. 有哪些关键设计决策？
-4. 与现有方案相比有什么优势？
-
-#### 技术要点
-
-1. 关键技术实现
-2. 核心概念和术语
-3. 代码示例和用法
-4. 数据流和架构
-
-### 5. 文档翻译
-
-**当 `--lang zh-CN` 时（默认），需要将英文文档翻译为中文**：
-
-#### 翻译原则
-
-1. **保持格式不变**：Markdown 结构、代码块、链接、表格等格式保持原样
-2. **专业术语保留**：技术术语保留英文或使用中英对照，如：
-   - Context Rot → Context Rot（上下文腐化）
-   - Wave → Wave（波次）
-   - Agent → Agent（代理）
-   - PR → PR（Pull Request）
-3. **代码不翻译**：代码块、命令、文件名、路径不翻译
-4. **链接不修改**：URL 链接保持原样
-5. **符合中文习惯**：使用流畅的中文表达，避免机翻感
-
-#### 翻译范围
-
-- README.md
-- docs/ 目录下所有 .md 文件
-- PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md 等规范文件
-- 代码注释（可选，根据深度决定）
+1. **保持格式**：Markdown 结构、代码块、链接、表格不变
+2. **术语保留**：技术术语用中英对照，如 `Wave（波次）`
+3. **代码不译**：代码块、命令、路径保持原样
+4. **输出位置**：翻译后文件保存到 `./translated/<repo-name>/`
 
 #### 翻译示例
 
 **原文**：
 ```markdown
 ## Getting Started
-
 First, install the dependencies:
-
-\`\`\`bash
-npm install
-\`\`\`
 ```
 
-**翻译后**：
+**译文**：
 ```markdown
 ## 快速开始
-
 首先，安装依赖：
-
-\`\`\`bash
-npm install
-\`\`\`
 ```
 
-### 6. 生成输出
+### 3. 分析并提取核心信息
 
-输出到指定目录：
+#### 问题域
+
+1. 项目解决什么问题？
+2. 之前的做法和痛点？
+3. 问题根源是什么？
+
+#### 解决方案
+
+1. 核心思路？
+2. 工作流程（用 Mermaid 图示）？
+3. 关键设计决策？
+
+#### 技术要点
+
+1. 核心概念和术语
+2. 关键实现细节
+3. 数据流和架构
+
+### 4. 生成输出
+
+输出目录结构：
 
 ```
 ./analyzed/<repo-name>/
-├── overview.md           # 项目概览（中文）
-├── problems.md           # 问题分析（中文）
-├── solutions.md          # 解决方案（中文）
-├── technical-points.md   # 技术要点（中文）
-├── structure.json        # 结构化数据
-├── translated/           # 翻译后的原文档（可选）
-│   ├── README.md
-│   └── docs/
-│       └── *.md
-└── html/                 # 可交互 HTML
-    ├── index.html
-    └── assets/
+├── README_CN.md              # 翻译后的 README
+├── docs/                     # 翻译后的文档
+│   └── **/*.md
+├── analysis/                 # 分析报告
+│   ├── overview.md
+│   ├── problems.md
+│   ├── solutions.md
+│   └── technical-points.md
+└── structure.json            # 结构化数据
 ```
 
 ## 输出模板
@@ -319,7 +259,7 @@ npm install
 
 ## 示例
 
-### 示例 1: 分析并翻译 GitHub 仓库
+### 示例 1: 分析 GitHub 仓库（默认翻译）
 
 ```bash
 /spec-analyzer https://github.com/gsd-build/get-shit-done --depth deep
@@ -327,41 +267,24 @@ npm install
 
 **执行步骤**：
 1. Clone 仓库到 `/tmp/get-shit-done/`
-2. 扫描所有 `.md` 文档
-3. 分析文档内容
-4. **翻译英文文档为中文**
-5. 生成中文分析报告
+2. **翻译核心文件** → `./analyzed/get-shit-done/README_CN.md` 等
+3. 分析内容，生成报告
 
-预期输出：
+### 示例 2: 只翻译不分析
 
-- `overview.md`: GSD 是一个 spec-driven development 系统
-- `problems.md`: Context Rot 问题、Vibecoding 的不可靠性
-- `solutions.md`: Wave 执行、200K 新鲜上下文、需求追踪
-- `technical-points.md`: XML Prompt 格式、多 Agent 编排、原子提交
-- `translated/`: 翻译后的原始文档
+```bash
+/spec-analyzer https://github.com/xxx/yyy --translate-only
+```
 
-### 示例 2: 保留英文输出
+只翻译核心文件，不生成分析报告。
+
+### 示例 3: 保留英文
 
 ```bash
 /spec-analyzer https://github.com/xxx/yyy --lang en
 ```
 
-**执行步骤**：
-1. Clone 仓库
-2. 分析文档（不翻译）
-3. 生成英文分析报告
-
-### 示例 3: Clone 并保留仓库
-
-```bash
-/spec-analyzer https://github.com/xxx/yyy --keep-repo
-```
-
-**执行步骤**：
-1. Clone 仓库到 `/tmp/xxx/`
-2. 分析文档
-3. 生成报告
-4. **保留临时仓库**（不删除，方便后续查看代码）
+跳过翻译步骤，直接分析。
 
 ## 分析重点
 
@@ -434,15 +357,12 @@ git config --global --unset https.proxy
 **优化建议**：
 - 使用 `--depth deep` 获取更多上下文
 - 手动调整专业术语的翻译
-- 参考 `translated/` 目录下的原文进行校对
 
 ### Q3: 如何只翻译不分析？
 
-当前 skill 不支持仅翻译模式。如果只需要翻译：
+使用 `--translate-only` 参数：
 ```bash
-# 手动 clone 并使用其他翻译工具
-git clone https://github.com/xxx/yyy.git
-# 然后使用专门的翻译工具
+/spec-analyzer https://github.com/xxx/yyy --translate-only
 ```
 
 ## 注意事项
